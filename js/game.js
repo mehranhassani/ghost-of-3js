@@ -4,6 +4,7 @@ class Game {
         this.camera = null;
         this.renderer = null;
         this.clock = new THREE.Clock();
+        this.startTime = Date.now();
         
         // Game systems
         this.worldGenerator = null;
@@ -158,6 +159,14 @@ class Game {
             
             clearTimeout(timeout);
             console.log('🎌 Game initialization completed successfully! 🎌');
+            
+            // Report successful loading to debug system
+            if (window.debugSystem) {
+                window.debugSystem.onGameEvent('game-loaded', {
+                    loadTime: Date.now() - this.startTime,
+                    systemsLoaded: true
+                });
+            }
         } catch (error) {
             clearTimeout(timeout);
             console.error('❌ Failed to initialize game:', error);
@@ -963,13 +972,34 @@ class Game {
 window.addEventListener('load', () => {
     console.log('Page loaded, starting game initialization...');
     
-    // Simple check - just wait a bit for scripts to load
+    // Wait for debug system and other scripts to load
     setTimeout(() => {
         console.log('Starting game...');
         try {
-            new Game();
+            // Create globally accessible game instance
+            window.gameInstance = new Game();
+            
+            // Integrate with debug system
+            if (window.debugSystem) {
+                window.debugSystem.onGameEvent('game-init', { timestamp: Date.now() });
+                
+                // Run initial tests after a short delay
+                setTimeout(() => {
+                    window.debugSystem.runAllTests();
+                }, 3000);
+            }
+            
         } catch (error) {
             console.error('Failed to create game instance:', error);
+            
+            // Report to debug system
+            if (window.debugSystem) {
+                window.debugSystem.onGameEvent('error', { 
+                    message: error.message, 
+                    stack: error.stack 
+                });
+            }
+            
             // Show error on page
             const loadingScreen = document.getElementById('loading-screen');
             if (loadingScreen) {
@@ -980,6 +1010,9 @@ window.addEventListener('load', () => {
                             <h3>Loading Error</h3>
                             <p>${error.message}</p>
                             <p>Please refresh the page to try again.</p>
+                            <p style="font-size: 12px; margin-top: 10px;">
+                                Check the debug panel (top-left) for detailed information.
+                            </p>
                         </div>
                         <button onclick="location.reload()" style="
                             background: #d4af37; 

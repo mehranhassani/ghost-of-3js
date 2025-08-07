@@ -81,13 +81,8 @@ class Player {
         this.stealthLevel = 0; // 0-100, higher = harder to detect
         this.isInStealth = false;
         
-        this.init();
+        // Don't auto-init here, let game.js call init() when ready
     }
-}
-
-// Make Player class available globally
-window.Player = Player;
-console.log('Player class loaded and available globally');
 
     async init() {
         this.createPlayerMesh();
@@ -247,7 +242,6 @@ console.log('Player class loaded and available globally');
         
         // Make sure player is visible and positioned correctly
         console.log('Player mesh created and added to scene');
-    }
     }
 
     setupControls() {
@@ -848,3 +842,7 @@ console.log('Player class loaded and available globally');
         }
     }
 }
+
+// Make Player class available globally
+window.Player = Player;
+console.log('Player class loaded and available globally');

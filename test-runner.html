@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Test Runner - Agent Feedback Loop</title>
+    <style>
+        body {
+            margin: 0;
+            background: #000;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+
+        .split-screen {
+            display: flex;
+            height: 100vh;
+        }
+
+        .game-frame {
+            flex: 1;
+            position: relative;
+            border: 2px solid #00ff00;
+        }
+
+        .test-panel {
+            width: 500px;
+            background: rgba(0, 0, 0, 0.95);
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 2px solid #00ff00;
+        }
+
+        .iframe-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+
+        .status.success {
+            background: rgba(0, 255, 0, 0.2);
+            border: 1px solid #00ff00;
+        }
+
+        .status.error {
+            background: rgba(255, 0, 0, 0.2);
+            border: 1px solid #ff0000;
+            color: #ff4444;
+        }
+
+        .status.warning {
+            background: rgba(255, 255, 0, 0.2);
+            border: 1px solid #ffff00;
+            color: #ffff00;
+        }
+
+        .test-controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        button {
+            background: #333;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 10px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        button:hover {
+            background: #444;
+        }
+
+        .screenshot-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .screenshot-item {
+            border: 1px solid #333;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .screenshot-item img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #555;
+        }
+
+        .log-viewer {
+            background: rgba(0, 20, 0, 0.8);
+            border: 1px solid #333;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            font-size: 11px;
+            line-height: 1.3;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="split-screen">
+        <!-- Game Frame -->
+        <div class="game-frame">
+            <div class="iframe-container">
+                <iframe id="game-frame" src="index.html"></iframe>
+            </div>
+        </div>
+
+        <!-- Test Panel -->
+        <div class="test-panel">
+            <h2>🔧 Agent Feedback Loop - Test Runner</h2>
+            
+            <div id="test-status" class="status">
+                <strong>Status:</strong> Initializing...
+            </div>
+
+            <div class="test-controls">
+                <button onclick="startTest()">Run Test</button>
+                <button onclick="takeScreenshot()">Screenshot</button>
+                <button onclick="reloadGame()">Reload Game</button>
+                <button onclick="exportResults()">Export Results</button>
+            </div>
+
+            <div>
+                <h3>📊 Test Metrics</h3>
+                <div id="metrics">
+                    <div class="metric">
+                        <span>Test Duration:</span>
+                        <span id="test-duration">0s</span>
+                    </div>
+                    <div class="metric">
+                        <span>Load Time:</span>
+                        <span id="load-time">-</span>
+                    </div>
+                    <div class="metric">
+                        <span>Errors:</span>
+                        <span id="error-count">0</span>
+                    </div>
+                    <div class="metric">
+                        <span>Screenshots:</span>
+                        <span id="screenshot-count">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3>📝 Test Log</h3>
+                <div id="test-log" class="log-viewer"></div>
+            </div>
+
+            <div>
+                <h3>📸 Screenshots</h3>
+                <div id="screenshot-gallery" class="screenshot-gallery"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class TestRunner {
+            constructor() {
+                this.startTime = Date.now();
+                this.testResults = [];
+                this.screenshots = [];
+                this.logs = [];
+                this.errors = [];
+                this.gameFrame = document.getElementById('game-frame');
+                
+                this.initializeTest();
+                this.startMonitoring();
+            }
+
+            log(message, type = 'info') {
+                const timestamp = Date.now() - this.startTime;
+                const logEntry = {
+                    timestamp,
+                    message,
+                    type,
+                    time: new Date().toLocaleTimeString()
+                };
+                
+                this.logs.push(logEntry);
+                this.updateLogViewer();
+                
+                console.log(`[${logEntry.time}] ${type.toUpperCase()}: ${message}`);
+            }
+
+            updateLogViewer() {
+                const logViewer = document.getElementById('test-log');
+                const html = this.logs.slice(-50).map(log => {
+                    const color = log.type === 'error' ? '#ff4444' : 
+                                log.type === 'warning' ? '#ffff00' : '#00ff00';
+                    return `<div style="color: ${color};">[${log.time}] ${log.message}</div>`;
+                }).join('');
+                
+                logViewer.innerHTML = html;
+                logViewer.scrollTop = logViewer.scrollHeight;
+            }
+
+            initializeTest() {
+                this.log('Test runner initialized');
+                this.log('Loading game in iframe...');
+                
+                // Listen for messages from the game
+                window.addEventListener('message', (event) => {
+                    if (event.origin !== window.location.origin) return;
+                    
+                    this.handleGameMessage(event.data);
+                });
+
+                // Monitor iframe load
+                this.gameFrame.onload = () => {
+                    this.log('Game iframe loaded');
+                    this.startGameMonitoring();
+                };
+            }
+
+            startGameMonitoring() {
+                // Try to access the game's debug system
+                setTimeout(() => {
+                    try {
+                        const gameWindow = this.gameFrame.contentWindow;
+                        if (gameWindow && gameWindow.debugSystem) {
+                            this.log('Found game debug system, connecting...');
+                            this.connectToGameDebug(gameWindow);
+                        } else {
+                            this.log('No debug system found in game, using fallback monitoring', 'warning');
+                            this.fallbackMonitoring();
+                        }
+                    } catch (error) {
+                        this.log(`Error connecting to game: ${error.message}`, 'error');
+                        this.fallbackMonitoring();
+                    }
+                }, 2000);
+            }
+
+            connectToGameDebug(gameWindow) {
+                // Hook into the game's debug system
+                const originalOnGameEvent = gameWindow.debugSystem.onGameEvent;
+                gameWindow.debugSystem.onGameEvent = (event, data) => {
+                    originalOnGameEvent.call(gameWindow.debugSystem, event, data);
+                    this.handleGameEvent(event, data);
+                };
+
+                this.log('Connected to game debug system');
+                this.gameDebugSystem = gameWindow.debugSystem;
+            }
+
+            handleGameEvent(event, data) {
+                this.log(`Game Event: ${event} - ${JSON.stringify(data)}`);
+                
+                switch (event) {
+                    case 'game-loaded':
+                        this.onGameLoaded(data);
+                        break;
+                    case 'error':
+                        this.onGameError(data);
+                        break;
+                    case 'player-moved':
+                        this.onPlayerMoved(data);
+                        break;
+                }
+            }
+
+            onGameLoaded(data) {
+                this.log('✅ Game loaded successfully!', 'success');
+                document.getElementById('load-time').textContent = `${data.loadTime}ms`;
+                this.updateStatus('Game loaded successfully!', 'success');
+                
+                // Take a screenshot of the loaded game
+                setTimeout(() => {
+                    this.takeScreenshot('Game Loaded');
+                }, 1000);
+
+                // Start gameplay simulation
+                this.startGameplaySimulation();
+            }
+
+            onGameError(data) {
+                this.errors.push(data);
+                this.log(`❌ Game Error: ${data.message}`, 'error');
+                document.getElementById('error-count').textContent = this.errors.length;
+                this.updateStatus(`Error: ${data.message}`, 'error');
+            }
+
+            onPlayerMoved(data) {
+                // Take occasional screenshots during gameplay
+                if (this.screenshots.length < 5 && Math.random() < 0.1) {
+                    this.takeScreenshot('Player Movement');
+                }
+            }
+
+            fallbackMonitoring() {
+                // Basic monitoring without debug system
+                this.log('Using fallback monitoring');
+                
+                setInterval(() => {
+                    try {
+                        const gameWindow = this.gameFrame.contentWindow;
+                        if (gameWindow && gameWindow.gameInstance) {
+                            if (gameWindow.gameInstance.isLoaded && !this.gameLoadDetected) {
+                                this.gameLoadDetected = true;
+                                this.onGameLoaded({ loadTime: 'unknown' });
+                            }
+                        }
+                    } catch (error) {
+                        // Ignore cross-origin errors
+                    }
+                }, 1000);
+            }
+
+            startGameplaySimulation() {
+                this.log('Starting gameplay simulation...');
+                
+                // Simulate some player actions
+                setTimeout(() => {
+                    this.simulateKeyPress('KeyT'); // Open tutorial
+                    this.log('Simulated tutorial open');
+                }, 2000);
+
+                setTimeout(() => {
+                    this.simulateKeyPress('KeyI'); // Open inventory
+                    this.log('Simulated inventory open');
+                    this.takeScreenshot('Inventory UI');
+                }, 4000);
+
+                setTimeout(() => {
+                    this.simulateKeyPress('KeyQ'); // Open quest log
+                    this.log('Simulated quest log open');
+                    this.takeScreenshot('Quest UI');
+                }, 6000);
+
+                // Simulate movement
+                setTimeout(() => {
+                    this.simulateMovement();
+                }, 8000);
+            }
+
+            simulateKeyPress(keyCode) {
+                try {
+                    const gameWindow = this.gameFrame.contentWindow;
+                    const event = new KeyboardEvent('keydown', { code: keyCode });
+                    gameWindow.document.dispatchEvent(event);
+                } catch (error) {
+                    this.log(`Failed to simulate key press: ${error.message}`, 'warning');
+                }
+            }
+
+            simulateMovement() {
+                this.log('Simulating player movement...');
+                
+                const movements = ['KeyW', 'KeyA', 'KeyS', 'KeyD'];
+                let moveIndex = 0;
+                
+                const moveInterval = setInterval(() => {
+                    this.simulateKeyPress(movements[moveIndex % movements.length]);
+                    moveIndex++;
+                    
+                    if (moveIndex > 20) { // Stop after some movements
+                        clearInterval(moveInterval);
+                        this.takeScreenshot('After Movement');
+                        this.log('Movement simulation completed');
+                    }
+                }, 500);
+            }
+
+            takeScreenshot(reason = 'Manual') {
+                try {
+                    const gameWindow = this.gameFrame.contentWindow;
+                    const canvas = gameWindow.document.querySelector('canvas');
+                    
+                    if (canvas) {
+                        const dataURL = canvas.toDataURL('image/png');
+                        const timestamp = new Date().toLocaleTimeString();
+                        
+                        this.screenshots.push({
+                            dataURL,
+                            timestamp,
+                            reason,
+                            gameState: this.getGameState(gameWindow)
+                        });
+                        
+                        this.updateScreenshotGallery();
+                        document.getElementById('screenshot-count').textContent = this.screenshots.length;
+                        
+                        this.log(`📸 Screenshot taken: ${reason}`);
+                    } else {
+                        this.log('No canvas found for screenshot', 'warning');
+                    }
+                } catch (error) {
+                    this.log(`Screenshot failed: ${error.message}`, 'error');
+                }
+            }
+
+            getGameState(gameWindow) {
+                try {
+                    if (gameWindow.gameInstance) {
+                        return {
+                            loaded: gameWindow.gameInstance.isLoaded,
+                            paused: gameWindow.gameInstance.isPaused,
+                            gameTime: gameWindow.gameInstance.gameTime
+                        };
+                    }
+                } catch (error) {
+                    // Ignore
+                }
+                return { loaded: false };
+            }
+
+            updateScreenshotGallery() {
+                const gallery = document.getElementById('screenshot-gallery');
+                
+                gallery.innerHTML = this.screenshots.map((screenshot, index) => `
+                    <div class="screenshot-item">
+                        <img src="${screenshot.dataURL}" alt="Screenshot ${index + 1}">
+                        <div>${screenshot.reason}</div>
+                        <div style="font-size: 10px; color: #888;">${screenshot.timestamp}</div>
+                    </div>
+                `).join('');
+            }
+
+            updateStatus(message, type = 'info') {
+                const statusDiv = document.getElementById('test-status');
+                statusDiv.innerHTML = `<strong>Status:</strong> ${message}`;
+                statusDiv.className = `status ${type}`;
+            }
+
+            startMonitoring() {
+                setInterval(() => {
+                    document.getElementById('test-duration').textContent = 
+                        Math.floor((Date.now() - this.startTime) / 1000) + 's';
+                }, 1000);
+            }
+
+            exportResults() {
+                const report = {
+                    timestamp: new Date().toISOString(),
+                    duration: Date.now() - this.startTime,
+                    logs: this.logs,
+                    errors: this.errors,
+                    screenshots: this.screenshots.length,
+                    testResults: this.testResults
+                };
+
+                const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.download = `test-report-${report.timestamp}.json`;
+                link.href = url;
+                link.click();
+                URL.revokeObjectURL(url);
+
+                this.log('Test results exported');
+            }
+
+            reloadGame() {
+                this.log('Reloading game...');
+                this.gameFrame.src = this.gameFrame.src;
+                this.errors = [];
+                this.screenshots = [];
+                document.getElementById('error-count').textContent = '0';
+                document.getElementById('screenshot-count').textContent = '0';
+            }
+        }
+
+        // Global functions for buttons
+        let testRunner;
+
+        window.onload = () => {
+            testRunner = new TestRunner();
+        };
+
+        function startTest() {
+            testRunner.log('Manual test started');
+            testRunner.startGameplaySimulation();
+        }
+
+        function takeScreenshot() {
+            testRunner.takeScreenshot('Manual Screenshot');
+        }
+
+        function reloadGame() {
+            testRunner.reloadGame();
+        }
+
+        function exportResults() {
+            testRunner.exportResults();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+{
+  "timestamp": "2025-08-07T16:18:53.850Z",
+  "duration": 4,
+  "summary": {
+    "total": 26,
+    "passed": 26,
+    "failed": 0,
+    "passRate": 100
+  },
+  "results": [
+    {
+      "name": "File Structure",
+      "passed": 10,
+      "total": 10,
+      "details": [
+        "✅ index.html - EXISTS",
+        "✅ js/game.js - EXISTS",
+        "✅ js/debug-system.js - EXISTS",
+        "✅ js/systems/player.js - EXISTS",
+        "✅ js/systems/ui.js - EXISTS",
+        "✅ js/systems/world-generator.js - EXISTS",
+        "✅ js/systems/combat.js - EXISTS",
+        "✅ js/systems/audio.js - EXISTS",
+        "✅ js/utils/noise.js - EXISTS",
+        "✅ styles.css - EXISTS"
+      ]
+    },
+    {
+      "name": "Syntax Validation",
+      "passed": 7,
+      "total": 7,
+      "details": [
+        "✅ js/game.js - SYNTAX OK",
+        "✅ js/debug-system.js - SYNTAX OK",
+        "✅ js/systems/player.js - SYNTAX OK",
+        "✅ js/systems/ui.js - SYNTAX OK",
+        "✅ js/systems/world-generator.js - SYNTAX OK",
+        "✅ js/systems/combat.js - SYNTAX OK",
+        "✅ js/systems/audio.js - SYNTAX OK"
+      ]
+    },
+    {
+      "name": "Dependencies",
+      "passed": 5,
+      "total": 5,
+      "details": [
+        "✅ three.min.js - REFERENCED",
+        "✅ PointerLockControls.js - REFERENCED",
+        "✅ GLTFLoader.js - REFERENCED",
+        "✅ simplex-noise - REFERENCED",
+        "✅ howler.min.js - REFERENCED"
+      ]
+    },
+    {
+      "name": "Browser Simulation",
+      "passed": 3,
+      "total": 3,
+      "details": [
+        "✅ Script tags found: 8",
+        "✅ CSS stylesheet linked",
+        "✅ All UI elements found"
+      ]
+    },
+    {
+      "name": "Load Time Analysis",
+      "passed": 1,
+      "total": 1,
+      "details": [
+        "📦 Total size: 146 KB",
+        "📄 Files: 10",
+        "⏱️ Estimated load time: 1460ms"
+      ]
+    }
+  ]
+}
