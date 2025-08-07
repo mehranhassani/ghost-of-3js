@@ -22,13 +22,8 @@ class WorldGenerator {
         // Points of interest
         this.pointsOfInterest = [];
         
-        this.init();
+        // Don't auto-init, let game.js call init when ready
     }
-}
-
-// Make WorldGenerator class available globally
-window.WorldGenerator = WorldGenerator;
-console.log('WorldGenerator class loaded and available globally');
 
     init() {
         // Generate initial terrain textures and materials
@@ -449,3 +444,7 @@ console.log('WorldGenerator class loaded and available globally');
         return height;
     }
 }
+
+// Make WorldGenerator class available globally
+window.WorldGenerator = WorldGenerator;
+console.log('WorldGenerator class loaded and available globally');
