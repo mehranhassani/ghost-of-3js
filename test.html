@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Loading Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #333;
+            border-radius: 5px;
+        }
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+        .warning { color: #ff9800; }
+        button {
+            background: #d4af37;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #ffd700;
+        }
+    </style>
+</head>
+<body>
+    <h1>Ghost of Tsushima 3D - Loading Test</h1>
+    
+    <div class="test-section">
+        <h2>Library Loading Test</h2>
+        <div id="library-status">Checking libraries...</div>
+        <button onclick="testLibraries()">Test Libraries</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Game Initialization Test</h2>
+        <div id="game-status">Ready to test</div>
+        <button onclick="testGame()">Test Game</button>
+        <button onclick="openGame()">Open Full Game</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Console Log</h2>
+        <div id="console-log" style="background: #000; padding: 10px; height: 200px; overflow-y: auto; font-family: monospace; font-size: 12px;"></div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <script>
+        // Capture console logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function addToLog(message, type = 'log') {
+            const logDiv = document.getElementById('console-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#f44336' : type === 'warn' ? '#ff9800' : '#4CAF50';
+            logDiv.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToLog(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToLog(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addToLog(args.join(' '), 'warn');
+        };
+        
+        function clearLog() {
+            document.getElementById('console-log').innerHTML = '';
+        }
+        
+        function testLibraries() {
+            const statusDiv = document.getElementById('library-status');
+            statusDiv.innerHTML = '';
+            
+            const libraries = [
+                { name: 'Three.js', check: () => typeof THREE !== 'undefined' },
+                { name: 'SimplexNoise', check: () => typeof SimplexNoise !== 'undefined' },
+                { name: 'Howler', check: () => typeof Howl !== 'undefined' }
+            ];
+            
+            libraries.forEach(lib => {
+                const isLoaded = lib.check();
+                const status = isLoaded ? '✓ Loaded' : '✗ Not loaded';
+                const className = isLoaded ? 'success' : 'error';
+                statusDiv.innerHTML += `<div class="${className}">${lib.name}: ${status}</div>`;
+            });
+        }
+        
+        function testGame() {
+            const statusDiv = document.getElementById('game-status');
+            statusDiv.innerHTML = 'Testing game initialization...';
+            
+            // Check if we can create a basic Three.js scene
+            try {
+                if (typeof THREE === 'undefined') {
+                    throw new Error('Three.js not loaded');
+                }
+                
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+                const renderer = new THREE.WebGLRenderer();
+                
+                statusDiv.innerHTML = '<div class="success">✓ Basic Three.js functionality working</div>';
+                console.log('Basic Three.js test passed');
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">✗ Three.js test failed: ${error.message}</div>`;
+                console.error('Three.js test failed:', error);
+            }
+        }
+        
+        function openGame() {
+            window.open('index.html', '_blank');
+        }
+        
+        // Auto-test libraries on load
+        window.addEventListener('load', () => {
+            setTimeout(testLibraries, 1000);
+        });
+    </script>
+    
+    <!-- Load the same libraries as the main game -->
+    <script>
+        // Fallback mechanism for Three.js loading
+        window.THREE = window.THREE || {};
+        
+        function loadScript(src, fallbackSrc = null) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = () => {
+                    if (fallbackSrc) {
+                        console.warn(`Failed to load ${src}, trying fallback...`);
+                        loadScript(fallbackSrc).then(resolve).catch(reject);
+                    } else {
+                        reject(new Error(`Failed to load ${src}`));
+                    }
+                };
+                document.head.appendChild(script);
+            });
+        }
+        
+        // Load libraries with fallbacks
+        Promise.all([
+            loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r158/three.min.js', 
+                      'https://unpkg.com/three@0.158.0/build/three.min.js'),
+            loadScript('https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/PointerLockControls.js',
+                      'https://unpkg.com/three@0.158.0/examples/js/controls/PointerLockControls.js'),
+            loadScript('https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/loaders/GLTFLoader.js',
+                      'https://unpkg.com/three@0.158.0/examples/js/loaders/GLTFLoader.js'),
+            loadScript('https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/2.4.0/simplex-noise.min.js',
+                      'https://unpkg.com/simplex-noise@2.4.0/simplex-noise.min.js'),
+            loadScript('https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js',
+                      'https://unpkg.com/howler@2.2.3/dist/howler.min.js')
+        ]).then(() => {
+            console.log('All libraries loaded successfully');
+        }).catch(error => {
+            console.error('Failed to load libraries:', error);
+        });
+    </script>
+</body>
+</html>

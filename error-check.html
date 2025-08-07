@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error Checker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        #error-log {
+            background: #000;
+            padding: 10px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            border: 1px solid #333;
+            margin: 10px 0;
+        }
+        button {
+            background: #d4af37;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .error { color: #f44336; }
+        .warning { color: #ff9800; }
+        .success { color: #4CAF50; }
+        .info { color: #2196F3; }
+    </style>
+</head>
+<body>
+    <h1>Error Checker</h1>
+    <button onclick="checkGame()">Check Game</button>
+    <button onclick="clearLog()">Clear Log</button>
+    <button onclick="openGame()">Open Game</button>
+    <div id="error-log">Waiting for errors...</div>
+
+    <script>
+        const errorLog = document.getElementById('error-log');
+        
+        function addToLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#f44336' : 
+                         type === 'warn' ? '#ff9800' : 
+                         type === 'success' ? '#4CAF50' : '#2196F3';
+            errorLog.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            errorLog.scrollTop = errorLog.scrollHeight;
+        }
+        
+        // Capture all console output
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToLog(args.join(' '), 'info');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToLog(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addToLog(args.join(' '), 'warn');
+        };
+        
+        // Capture unhandled errors
+        window.addEventListener('error', function(event) {
+            addToLog(`Unhandled Error: ${event.message} at ${event.filename}:${event.lineno}`, 'error');
+        });
+        
+        // Capture promise rejections
+        window.addEventListener('unhandledrejection', function(event) {
+            addToLog(`Unhandled Promise Rejection: ${event.reason}`, 'error');
+        });
+        
+        function clearLog() {
+            errorLog.innerHTML = '';
+        }
+        
+        function openGame() {
+            window.open('index.html', '_blank');
+        }
+        
+        function checkGame() {
+            addToLog('Checking game libraries and functionality...', 'info');
+            
+            // Check if Three.js is loaded
+            if (typeof THREE === 'undefined') {
+                addToLog('ERROR: Three.js not loaded', 'error');
+            } else {
+                addToLog('✓ Three.js loaded', 'success');
+                
+                // Check for CapsuleGeometry
+                if (THREE.CapsuleGeometry) {
+                    addToLog('✓ CapsuleGeometry available', 'success');
+                } else {
+                    addToLog('WARNING: CapsuleGeometry not available', 'warning');
+                }
+                
+                // Test basic Three.js functionality
+                try {
+                    const scene = new THREE.Scene();
+                    const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+                    const renderer = new THREE.WebGLRenderer();
+                    addToLog('✓ Basic Three.js functionality working', 'success');
+                } catch (error) {
+                    addToLog(`ERROR: Three.js test failed - ${error.message}`, 'error');
+                }
+            }
+            
+            // Check other libraries
+            if (typeof SimplexNoise === 'undefined') {
+                addToLog('WARNING: SimplexNoise not loaded', 'warning');
+            } else {
+                addToLog('✓ SimplexNoise loaded', 'success');
+            }
+            
+            if (typeof Howl === 'undefined') {
+                addToLog('WARNING: Howler not loaded', 'warning');
+            } else {
+                addToLog('✓ Howler loaded', 'success');
+            }
+        }
+        
+        // Auto-check on load
+        window.addEventListener('load', () => {
+            setTimeout(checkGame, 2000);
+        });
+    </script>
+    
+    <!-- Load the same libraries as the main game -->
+    <script>
+        function loadScript(src, fallbackSrc = null) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = () => {
+                    addToLog(`Loaded: ${src}`, 'success');
+                    resolve();
+                };
+                script.onerror = () => {
+                    addToLog(`Failed to load: ${src}`, 'error');
+                    if (fallbackSrc) {
+                        addToLog(`Trying fallback: ${fallbackSrc}`, 'warning');
+                        loadScript(fallbackSrc).then(resolve).catch(reject);
+                    } else {
+                        reject(new Error(`Failed to load ${src}`));
+                    }
+                };
+                document.head.appendChild(script);
+            });
+        }
+        
+        // Load libraries with fallbacks
+        Promise.all([
+            loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r158/three.min.js', 
+                      'https://unpkg.com/three@0.158.0/build/three.min.js'),
+            loadScript('https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/PointerLockControls.js',
+                      'https://unpkg.com/three@0.158.0/examples/js/controls/PointerLockControls.js'),
+            loadScript('https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/loaders/GLTFLoader.js',
+                      'https://unpkg.com/three@0.158.0/examples/js/loaders/GLTFLoader.js'),
+            loadScript('https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/2.4.0/simplex-noise.min.js',
+                      'https://unpkg.com/simplex-noise@2.4.0/simplex-noise.min.js'),
+            loadScript('https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js',
+                      'https://unpkg.com/howler@2.2.3/dist/howler.min.js')
+        ]).then(() => {
+            addToLog('All libraries loaded successfully', 'success');
+        }).catch(error => {
+            addToLog(`Failed to load libraries: ${error.message}`, 'error');
+        });
+    </script>
+</body>
+</html>
