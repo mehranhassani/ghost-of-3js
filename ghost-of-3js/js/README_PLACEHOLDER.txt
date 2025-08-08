@@ -1,0 +1,1 @@
+This project now runs a 2D canvas game with procedural world generation. Open index.html in a browser to play. Controls: WASD/Arrow keys. Toggle Autopilot: button in HUD.
